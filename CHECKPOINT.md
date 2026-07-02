@@ -1,3 +1,5 @@
+Esto es una prueba del fork 
+
 # Checkpoint — VibeFast boilerplate, Fases 0-2 completas
 
 **Última actualización**: Fase 0 verificada, **Fase 1 (Auth + DB)** y **Fase 2 (Email con Resend)** implementadas y build/dev-verificadas.
