@@ -25,14 +25,49 @@ export async function updateSession(request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  // #region agent log
+  let _dbgSupaUrlOk = false
+  let _dbgSupaUrlErr = null
+  try {
+    if (url) {
+      new URL(url)
+      _dbgSupaUrlOk = true
+    }
+  } catch (e) {
+    _dbgSupaUrlErr = e instanceof Error ? e.message : String(e)
+  }
+  fetch("http://127.0.0.1:7598/ingest/ede61043-0435-486e-89b5-47fecd17318d", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "0f553b",
+    },
+    body: JSON.stringify({
+      sessionId: "0f553b",
+      runId: "pre-fix",
+      hypothesisId: "B",
+      location: "web/lib/supabase/middleware.js:updateSession",
+      message: "Middleware env check before createServerClient",
+      data: {
+        hasUrl: Boolean(url && url.trim()),
+        hasAnonKey: Boolean(anonKey && anonKey.trim()),
+        urlLooksLikeHostOnly: Boolean(url && !/^https?:\/\//i.test(url)),
+        supabaseUrlParsesOk: _dbgSupaUrlOk,
+        supabaseUrlParseError: _dbgSupaUrlErr,
+        pathname: request.nextUrl.pathname,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
+
   // Antes de Sem 2 el alumno aún no configuró Supabase. Sin claves,
   // dejamos pasar todo para que la landing (Sem 1) funcione igual.
   if (!url || !anonKey) return response
 
-  const supabase = createServerClient(
-    url,
-    anonKey,
-    {
+  let user = null
+  try {
+    const supabase = createServerClient(url, anonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -47,13 +82,57 @@ export async function updateSession(request) {
           )
         },
       },
-    }
-  )
+    })
 
-  // IMPORTANTE: no metas lógica entre createServerClient y getUser().
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    // IMPORTANTE: no metas lógica entre createServerClient y getUser().
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+
+    // #region agent log
+    fetch("http://127.0.0.1:7598/ingest/ede61043-0435-486e-89b5-47fecd17318d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "0f553b",
+      },
+      body: JSON.stringify({
+        sessionId: "0f553b",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "web/lib/supabase/middleware.js:getUser",
+        message: "getUser completed",
+        data: {
+          hasUser: Boolean(user),
+          authError: result.error ? result.error.message : null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
+  } catch (err) {
+    // #region agent log
+    fetch("http://127.0.0.1:7598/ingest/ede61043-0435-486e-89b5-47fecd17318d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "0f553b",
+      },
+      body: JSON.stringify({
+        sessionId: "0f553b",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "web/lib/supabase/middleware.js:catch",
+        message: "Middleware threw during Supabase session",
+        data: {
+          errorName: err instanceof Error ? err.name : "unknown",
+          errorMessage: err instanceof Error ? err.message : String(err),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
+    throw err
+  }
 
   const { pathname } = request.nextUrl
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))

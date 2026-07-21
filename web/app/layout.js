@@ -16,6 +16,40 @@ const dmSans = DM_Sans({
   display: "swap",
 })
 
+// #region agent log
+const _dbgAppUrl = process.env.NEXT_PUBLIC_APP_URL || config.app.defaultUrl
+let _dbgUrlOk = false
+let _dbgUrlErr = null
+try {
+  new URL(_dbgAppUrl)
+  _dbgUrlOk = true
+} catch (e) {
+  _dbgUrlErr = e instanceof Error ? e.message : String(e)
+}
+fetch("http://127.0.0.1:7598/ingest/ede61043-0435-486e-89b5-47fecd17318d", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-Debug-Session-Id": "0f553b",
+  },
+  body: JSON.stringify({
+    sessionId: "0f553b",
+    runId: "pre-fix",
+    hypothesisId: "A",
+    location: "web/app/layout.js:metadataBase",
+    message: "Evaluating NEXT_PUBLIC_APP_URL for metadataBase",
+    data: {
+      rawAppUrl: _dbgAppUrl,
+      hasProtocol: /^https?:\/\//i.test(_dbgAppUrl),
+      urlParsesOk: _dbgUrlOk,
+      parseError: _dbgUrlErr,
+      fromEnv: Boolean(process.env.NEXT_PUBLIC_APP_URL),
+    },
+    timestamp: Date.now(),
+  }),
+}).catch(() => {})
+// #endregion
+
 export const metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || config.app.defaultUrl
